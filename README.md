@@ -43,6 +43,7 @@ But it’s not just *one* simple training session. It’s like a whole bunch of 
 The whole point is to make these language models way better at *thinking* through problems and giving you smart answers, not just spitting out words.
 
 So yeah, that’s the super short version before we look into the crazy details of each step.
+
 <br>
 
 ## How DeepSeek V3 (MOE) Thinks?
@@ -62,6 +63,7 @@ This router is what makes the DeepSeek V3 a mixture of experts model (MOE)
 because it dynamically directs each request to the most suitable expert component for efficient processing.
 
 Simple questions get quick, direct answers through the fast path, while complex queries receive detailed attention through the expert system. Finally, these responses are then combined into clear, accurate outputs.
+
 <br>
 
 ## DeepSeek V3 as the Policy Model (Actor) In RL Setup
@@ -77,6 +79,7 @@ The RL agent (DeepSeek V3) starts by taking an **Action**, which means it genera
 After taking an action, the Environment gives back a **Reward**. This Reward is like feedback, it tells DeepSeek V3 base model how good its action was. A positive Reward means it did something right, maybe got the answer correct or reasoned well. This feedback signal then goes back to DeepSeek-V3-Base, helping it learn and adjust how it takes actions in the future to get even better Rewards.
 
 **In the upcoming sections, we’ll discuss this RL setup with reward model and the RL algorithm they used and try to solve it using our text input.**
+
 <br>
 
 ## How GRPO Algorithm Works?
@@ -94,6 +97,7 @@ It starts with a question or prompt given to a model, called the **“Old Policy
 GRPO calculates an **“Advantage** for each answer by comparing it to the *average* quality of the other answers within its group. Answers better than average get a positive advantage, and worse ones get a negative advantage. Crucially, this is done *without* needing a separate critic model. 
 
 These advantage scores are then used to update the Old Policy, making it more likely to produce better-than-average answers in the future. This updated model becomes the new **“Old Policy”** and the process repeats, iteratively improving the model.
+
 <br>
 
 ## Objective Function of GRPO
@@ -159,6 +163,7 @@ The **Beta** value controls how much the model should remain close to the **Refe
 ![Visual Repesentation of StayStable (Created by [Fareed Khan](undefined))](https://cdn-images-1.medium.com/max/5762/1*RWY1ZY_eiCfdIB8N5maq6g.png)
 
 So in short **StayStablePart** makes sure the model learns gradually and doesn’t make crazy jumps.
+
 <br>
 
 ## Reward Modeling for DeepSeek R1 Zero
@@ -168,6 +173,7 @@ Now that we have understand the the main theoretical concepts, let’s use our t
 Remember, for R1 Zero, they kept things simple and direct. Instead of using a fancy neural network to judge the answers (like they might in later stages), they used a **rule-based reward system**.
 
 For our math problem: **“What is 2 + 3 * 4?”**
+
 <br>
 
 ### Rule-Based Check
@@ -177,6 +183,7 @@ The system knows the correct answer is **14**. It will look at the output genera
 ![Rule based check (Created by [Fareed Khan](undefined))](https://cdn-images-1.medium.com/max/7932/1*waLzHKcekKHM_O634wkJiQ.png)
 
 If the `<answer>` tag contains “14” (or something numerically the same), It gets a positive reward, let’s say **+1**. If it’s wrong, it gets **0** reward, or possibly even a negative reward (though the paper focuses on 0 for simplicity at this stage).
+
 <br>
 
 ### Format Rewards
@@ -192,6 +199,7 @@ DeepSeek R1 paper explicitly mentions avoiding neural reward models for
 DeepSeek-R1-Zero to prevent reward hacking and reduce complexity in this 
 initial exploratory phase
 ```
+
 <br>
 
 ## Training Template for Reward
@@ -231,6 +239,7 @@ multiply before add. 3 * 4 = 12. 2 + 12 = 14
 </answer>
 ```
 Interestingly, the DeepSeek team intentionally kept this template simple and focused on structure, not on telling the model how to reason.
+
 <br>
 
 ## RL Training Process for DeepSeek R1 Zero
@@ -313,6 +322,7 @@ The overall training loop looks like this:
 ![DeepSeek simplified training process (Created by [Fareed Khan](undefined))](https://cdn-images-1.medium.com/max/4908/1*eJ_zDEkWnjJnswiNgQCaqw.png)
 
 Over time, the model **learns from its mistakes**, becoming more accurate and effective at solving reasoning problems. 🚀
+
 <br>
 
 ## Two main problems with R1 Zero
@@ -340,6 +350,7 @@ These are the two main reasons they transformed their initial R1 Zero Model into
 ```
 
 In the next section, we’ll go over how they improved their R1 zero model to the R1 model, which boosted its performance and helped it outperform all other models, both open-source and closed.
+
 <br>
 
 ## Cold Start Data
@@ -347,6 +358,7 @@ In the next section, we’ll go over how they improved their R1 zero model to th
 So to fix R1 Zero issues and really get DeepSeek reasoning properly, researchers performed a **Cold Start Data Collection and included Supervised Fine Tuning**.
 
 You can think of it as giving the model a good foundation in reasoning before the really intense RL training. Basically, they wanted to teach **DeepSeek-V3 Base** what good reasoning looks like and how to present it clearly.
+
 <br>
 
 ### Few shot Prompting with Long CoT
@@ -381,6 +393,7 @@ After seeing these examples, the model should learn to give answers in a similar
 do multiplication before addition.  So, first calculate 3 * 4 = 12. 
 Then, add 2 to 12. 2 + 12 = 14. | special_token | Summary: The answer is 14.
 ```
+
 <br>
 
 ### Direct Prompting
@@ -407,6 +420,7 @@ Verification:  Checking order of operations again, yes, multiplication
 is before addition.  Calculation looks right.
 | special_token | Summary: The answer is 14.
 ```
+
 <br>
 
 ### Post Processing Refinement
@@ -440,6 +454,7 @@ The **Cold Start Data** they ended up with was really good because:
 * **Human-Checked:** They made sure to filter out any bad examples, so the data was clean and reliable.
 
 After getting this **Cold Start Data** they did **Supervised Fine-Tuning (SFT)**.
+
 <br>
 
 ## Supervised Fine-Tuning
@@ -477,6 +492,7 @@ The fine-tuning process starts with **Input: Prompt + Target Reasoning**, where 
 In **Predict Next Token**, the model generates the next word in the reasoning sequence. This is compared to the actual next token in **Compare to Target Token (Calculate Loss)** using a loss function. A higher loss means the prediction was further from the correct token.
 
 In **Update Model Parameters**, backpropagation and an optimizer adjust the model’s weights to improve its predictions. This process loops back, repeating over many input-target pairs, gradually improving the model structured reasoning skills with each iteration.
+
 <br>
 
 ## Reasoning-Oriented RL
@@ -531,6 +547,7 @@ This RL training loop follows the same DeepSeek R1 Zero training loop we saw eal
  4. Train the model to favor high-advantage outputs.
 
  5. Repeat the process!
+
 <br>
 
 ## Rejection Sampling
@@ -554,6 +571,7 @@ Finally, **SFT Stage 2** trains the previous model checkpoint on the **combined 
 This is Rejection Sampling, we’re rejecting the subpar samples and 
 keeping only the best to generate a high quality training data
 ```
+
 <br>
 
 ## RL for All Scenarios
@@ -586,6 +604,7 @@ After many iterations of training, the model is refined to strike a good balance
 ```
 Their final checkpoint, highly optimized version is then named DeepSeek-R1
 ```
+
 <br>
 
 ## Distillation
